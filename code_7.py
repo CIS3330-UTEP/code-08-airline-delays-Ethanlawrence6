@@ -1,43 +1,42 @@
 import pandas as pd
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
-import seaborn as sns
+import statsmodels.api as sm
 
-filename = 'Flight_Delays_2018.csv'
-df = pd.read_csv(filename)
-#ARR_DELAY is the column name that should be used as dependent variable (Y).
-print(df.info())
-print(df.describe())
-print(df.isnull().sum())
+df = pd.read_csv("Flight_Delays_2018.csv")
 
-plt.figure(figsize=(10, 6))
-plt.hist(df['ARR_DELAY'].dropna(), bins=50, color='skyblue', edgecolor='black')
-plt.title('Distribution of Arrival Delays')
-plt.xlabel('Arrival Delay (minutes)')
-plt.ylabel('Frequency')
-plt.grid(True)
+df = df[['ARR_DELAY', 'DEP_DELAY', 'DISTANCE', 'ORIGIN', 'DEST', 'AIR_TIME']]
+df = df.dropna()
+
+print("Summary Statistics:")
+print(df.descriibe())
+
+plt.hist(df['ARR_DELAY'], bins=50)
+plt.title("Arrival Delay Distribution")
+plt.xlabel("Arrival Delay (minutes)")
+plt.ylabel("Frequency")
 plt.show()
 
-plt.figure(figsize=(10, 8))
-sns.heatmap(df.corr(numeric_only=True), annot=True, fmt=".2f", cmap='coolwarm')
-plt.title('Correlation Matrix of Numerical Features')
+correlation = df.corr(numeric_only=True)['ARR_DELAY'].sort_values(ascending=False)
+print("\nCorrelation with ARR_DELAY:\n", correlation)
+
+top_airports = df['ORIGIN'].value_counts().head(5).index.tolist()
+df_filtered = df[df['ORIGIN'].isin(top_airports)]
+
+df_filtered.boxplot(column='ARR_DELAY', by='ORIGIN')
+plt.title("Arrival Delay by Origin Airport")
+plt.suptitle("")
+plt.xlabel("Origin Airport")
+plt.ylabel("Arrival Delay (min)")
 plt.show()
 
-features = ['ARR_DELAY', 'DEP_DELAY', 'DISTANCE', 'CANCELLED', 'CRS_ELAPSED_TIME']
-df_model = df[features].dropna()
+X = df_filtered[['DEP_DELAY', 'DISTANCE', 'AIR_TIME']]
+Y = df_filtered['ARR_DELAY']
 
-X = df_model[['DEP_DELAY', 'DISTANCE', 'CRS_ELAPSED_TIME']]
-X = sm.add_constant(X)  # Adds a constant term to the predictor
-Y = df_model['ARR_DELAY']
+X = sm.add_constant(X)  
 
 model = sm.OLS(Y, X).fit()
 
 print(model.summary())
-
 fig, ax = plt.subplots()
-fig = sm.graphics.influence_plot(model, 'DEP_DELAY', ax=ax)
-plt.title('Fit Plot: ARR_DELAY vs DEP_DELAY')
-plt.xlabel('Departure Delay (minutes)')
-plt.ylabel('Arrival Delay (minutes)')
-plt.grid(True)
+fig = sm.graphics.plot_fit(model, "DEP_DELAY", ax=ax)
 plt.show()
